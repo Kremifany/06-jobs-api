@@ -1,7 +1,8 @@
+const User = require('../models/User')
 const jwt = require("jsonwebtoken");
 const { UnauthenticatedError } = require("../errors");
 
-const authanticationMiddleware = async (req, res, next) => {
+const auth = async (req, res, next) => {
   //   try {
   //     req.user = jwt.verify(token, process.env.JWT_SECRET);
 
@@ -10,31 +11,33 @@ const authanticationMiddleware = async (req, res, next) => {
   //     throw new UnauthenticatedError("Not authorized");
   //   }
   // };
-  try {
+  // check header
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    throw new UnauthenticatedError("Authentication invalid");
+  }
     // Extract token from Authorization header
-    const token = req.headers.authorization?.split(" ")?.[1];
-
-    if (!token) {
-      throw new UnauthenticatedError("No token provided");
-    }
-
+    const token = authHeader.split(" ")?.[1];
+    
+  try {
+    const payload  = jwt.verify(token, process.env.JWT_SECRET);
     // Verify token and check expiration
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const expirationTime = decoded.exp; // Get expiration time in seconds
-    const now = Math.floor(Date.now() / 1000); // Get current Unix timestamp in seconds
-
-    if (now > expirationTime) {
-      throw new UnauthenticatedError("Token expired");
-    }
-
+    
+    // const expirationTime = decoded.exp; // Get expiration time in seconds
+    // const now = Math.floor(Date.now() / 1000); // Get current Unix timestamp in seconds
+    // if (now > expirationTime) {
+    //   throw new UnauthenticatedError("Token expired");
+    // }
+    
+    
     // Token is valid, attach user information and proceed
-    req.user = decoded;
+    req.user = {userId:payload.userId, name:payload.name};
     next();
   } catch (error) {
     // Handle invalid token (e.g., expired or malformed)
-    console.error("Invalid token:", error.message);
-    throw new UnauthenticatedError("Not authorized"); // Or send appropriate error response
+    // console.error("Invalid token:", error.message);
+    throw new UnauthenticatedError("Authentication invalid");
   }
 };
 
-module.exports = authanticationMiddleware;
+module.exports = auth;
