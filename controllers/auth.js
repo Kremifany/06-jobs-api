@@ -6,7 +6,7 @@ const register = async (req, res) => {
   console.log("in auth.register:");
   console.log("req.body:  ", req.body);
 
-  const user = await User.create({ ...req.body });
+  const user = await User.create(req.body);
   const token = user.createJWT();
 
   console.log("token created: ",token)
