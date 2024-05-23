@@ -1,7 +1,7 @@
 const Job = require("../models/Job");
 const { BadRequestError, NotFoundError } = require("../errors");
 const { StatusCodes } = require("http-status-codes");
-
+const mongoose = require("mongoose");
 const getAllJobs = async (req, res) => {
   const jobs = await Job.find({ createdBy: req.user.userId }).sort("createdAt");
   res.status(StatusCodes.OK).json({ jobs, count: jobs.length });
@@ -13,7 +13,9 @@ const getJob = async (req, res) => {
     user: { userId },
     params: { id: jobId },
   } = req;
-  console.log("printing data", jobId, userId);
+  if (!mongoose.isValidObjectId(jobId)) {
+    throw new BadRequestError("Invalid job id");
+  }
   const job = await Job.findOne({ _id: jobId, createdBy: userId });
 
   if (!job) {
@@ -29,23 +31,29 @@ const createJob = async (req, res) => {
 };
 
 const updateJob = async (req, res) => {
-   console.log(req.user, req.params);
-   const {
-     user: { userId },
-     params: { id: jobId },
-     body: { company, position },
-   } = req;
-   if(company === ""|| position === ""){
+  console.log(req.user, req.params);
+  const {
+    user: { userId },
+    params: { id: jobId },
+    body: { company, position },
+  } = req;
+  if (!company || !position) {
     throw new BadRequestError("Company or position fields cannot be empty");
-   }
-   console.log("printing data", jobId, userId, company, position);
-   const job = await Job.findByIdAndUpdate({ _id: jobId, createdBy: userId },req.body,{new:true,runValidators:true});
+  }
+  if (!mongoose.isValidObjectId(jobId)) {
+    throw new BadRequestError("Invalid job id");
+  }
+  const job = await Job.findByIdAndUpdate(
+    { _id: jobId, createdBy: userId },
+    req.body,
+    { new: true, runValidators: true }
+  );
 
-   if (!job) {
-     throw new NotFoundError(`No job with id :  ${jobId}`);
-   }
-    
-   res.status(StatusCodes.OK).json({ job });
+  if (!job) {
+    throw new NotFoundError(`No job with id :  ${jobId}`);
+  }
+
+  res.status(StatusCodes.OK).json({ job });
 };
 
 const deleteJob = async (req, res) => {
@@ -53,13 +61,11 @@ const deleteJob = async (req, res) => {
   const {
     user: { userId },
     params: { id: jobId },
-    } = req;
-  
-  console.log("printing data", jobId, userId);
-  const job = await Job.findByIdAndRemove(
-    { _id: jobId, createdBy: userId },
-      );
-
+  } = req;
+  if (!mongoose.isValidObjectId(jobId)) {
+    throw new BadRequestError("Invalid job id");
+  }
+  const job = await Job.findByIdAndRemove({ _id: jobId, createdBy: userId });
   if (!job) {
     throw new NotFoundError(`No job with id :  ${jobId}`);
   }
